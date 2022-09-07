@@ -2,6 +2,7 @@ import { Box, Button, Divider, Stack, TextField } from "@mui/material";
 import { Fragment, useState } from "react";
 import SockJS from "sockjs-client";
 import { over } from "stompjs";
+import { API_URL } from "./constants/apiUrl";
 import Header from "./layout/header";
 import Sidebar from "./layout/sidebar";
 import ChatRoom from "./pages/chat-room";
@@ -15,42 +16,43 @@ function App() {
     receivername: "",
     connected: false,
     message: "",
-    seenState: 'unseen'
+    seenState: "unseen",
   });
   const [tab, setTab] = useState("CHATROOM");
+  // const API_URL = "https://messsenger-clone-server.herokuapp.com/"
+  // const API_URL = "http://localhost:8080/"
 
   const handleUserNameChange = (event) => {
     const { value, name } = event.target;
     setUserData({ ...userData, [name]: value });
   };
 
-
   const registerUser = () => {
-    let Sock = new SockJS("http://localhost:8080/ws");
+    let Sock = new SockJS(API_URL + "ws");
     stompClient = over(Sock);
     stompClient.connect({}, onConnected, onError);
-    console.log("stompclient",stompClient)
+    console.log("stompclient", stompClient);
   };
 
   const onConnected = () => {
-    setUserData({...userData,"connected": true});
+    setUserData({ ...userData, connected: true });
     stompClient.subscribe("/chatroom/public", onPublicMessageReceived);
     stompClient.subscribe(
       "/user/" + userData.username + "/private",
       onPrivateMessageReceived
     );
-    userJoin()
+    userJoin();
   };
 
   const userJoin = () => {
     let chatMessage = {
       senderName: userData.username,
-      status: 'JOIN'
-    }
-    stompClient.send('/app/message',{}, JSON.stringify(chatMessage))
-    console.log("stompclient",stompClient)
-    setUserData({...userData,"connected": true, message:""})
-  }
+      status: "JOIN",
+    };
+    stompClient.send("/app/message", {}, JSON.stringify(chatMessage));
+    console.log("stompclient", stompClient);
+    setUserData({ ...userData, connected: true, message: "" });
+  };
 
   const onError = (e) => {
     console.log(e);
