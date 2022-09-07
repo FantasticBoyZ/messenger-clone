@@ -1,4 +1,10 @@
-import { BorderColor, FiberManualRecord, MoreHoriz, Search, VideoCall } from "@mui/icons-material";
+import {
+  BorderColor,
+  FiberManualRecord,
+  MoreHoriz,
+  Search,
+  VideoCall,
+} from "@mui/icons-material";
 import {
   Autocomplete,
   Avatar,
@@ -17,7 +23,7 @@ import {
   Typography,
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
-import React, { Fragment, useState } from "react";
+import React, { Fragment, useEffect, useState } from "react";
 import FormatDataUtils from "../../utils/formatData";
 const useStyle = makeStyles({
   sidebar: {
@@ -30,19 +36,21 @@ const useStyle = makeStyles({
     fontWeight: "bold",
   },
   badgeUnseen: {
-    backgroundColor: '#31A24C',
+    backgroundColor: "#31A24C",
   },
   iconUnseen: {
-    color: '#2E89FF',
-    fontSize: '12px'
+    color: "#2E89FF",
+    fontSize: "12px",
   },
   iconUnseenContainer: {
     "& svg": {
       fontSize: 18,
     },
-  }
+  },
 });
-const Sidebar = () => {
+const Sidebar = (props) => {
+  const { privateChats, publicChats, tab, setTab, userData, setUserData } =
+    props;
   const [options, setOptions] = useState([
     { title: "The Shawshank Redemption", year: 1994 },
     { title: "The Godfather", year: 1972 },
@@ -71,8 +79,13 @@ const Sidebar = () => {
       status: "unseen",
       active: true,
     },
-    
   ];
+
+  useEffect(() => {
+    console.log(privateChats.keys().next().value);
+    console.log(publicChats);
+  }, [privateChats, publicChats]);
+
   return (
     <Stack className={classes.sidebar}>
       <Stack
@@ -81,7 +94,13 @@ const Sidebar = () => {
         alignItems="center"
         px={1}
       >
-        <Typography variant="h5">
+        <Typography
+          variant="h5"
+          onClick={() => {
+            setTab("CHATROOM");
+            console.log("setTab Chatroom");
+          }}
+        >
           <strong>Chat</strong>
         </Typography>
         <Stack direction="row">
@@ -158,19 +177,25 @@ const Sidebar = () => {
           )}
         />
       </Stack>
-      <Stack style={{maxHeight: '83vh', overflow: 'auto'}}>
-        <List>
+      <Stack style={{ maxHeight: "83vh", overflow: "auto" }}>
+        {/* <List>
           {listMessage.map((sender) => (
-            <ListItem alignItems="center" key={sender.id} secondaryAction={
-              <Box className={classes.iconUnseenContainer}>
-                {sender.status === 'unseen' ?  <FiberManualRecord className={classes.iconUnseen}/> : null}
-              </Box>
-            }>
+            <ListItem
+              alignItems="center"
+              key={sender.id}
+              secondaryAction={
+                <Box className={classes.iconUnseenContainer}>
+                  {sender.status === "unseen" ? (
+                    <FiberManualRecord className={classes.iconUnseen} />
+                  ) : null}
+                </Box>
+              }
+            >
               <ListItemAvatar>
                 <Badge
                   // color="success"
                   classes={{ badge: classes.badgeUnseen }}
-                  badgeContent={sender.active ? "" :null}
+                  badgeContent={sender.active ? "" : null}
                   overlap="circular"
                   anchorOrigin={{
                     vertical: "bottom",
@@ -213,6 +238,112 @@ const Sidebar = () => {
               />
             </ListItem>
           ))}
+        </List> */}
+        <List>
+          {[...privateChats.keys()].map((name, index) => {
+            const messages = privateChats.get(name);
+            // console.log([...messages].pop()?.message);
+            return (
+              <Box key={index}>
+                {userData.username !== name && (
+                  <ListItem
+                    alignItems="center"
+                    onClick={() => {
+                      setTab(name);
+                      if ([...messages]) {
+                        let messagesClone = [...messages];
+                        const messageReceive = messagesClone.pop();
+                        messagesClone.push({
+                          ...messageReceive,
+                          seenState: "seen",
+                        });
+                        console.log(messagesClone);
+                        privateChats.set(name, messagesClone);
+                      }
+                    }}
+                    selected={tab === name}
+                    secondaryAction={
+                      <Box className={classes.iconUnseenContainer}>
+                        {[...messages].pop() &&
+                        [...messages].pop()?.seenState === "unseen" &&
+                        [...messages].pop()?.senderName !==
+                          userData?.username ? (
+                          <FiberManualRecord className={classes.iconUnseen} />
+                        ) : null}
+                      </Box>
+                    }
+                  >
+                    <ListItemAvatar>
+                      <Badge
+                        // color="success"
+                        classes={{ badge: classes.badgeUnseen }}
+                        badgeContent=""
+                        // badgeContent={sender.active ? "" : null}
+                        overlap="circular"
+                        anchorOrigin={{
+                          vertical: "bottom",
+                          horizontal: "right",
+                        }}
+                      >
+                        <Avatar
+                          alt="Remy Sharp"
+                          // src={sender.avatarUrl}
+                          src=""
+                          sx={{ width: 56, height: 56 }}
+                        />
+                      </Badge>
+                    </ListItemAvatar>
+                    <ListItemText
+                      className={classes.listItewTextMessage}
+                      primary={
+                        <Fragment>
+                          <Typography
+                            variant="span"
+                            className={
+                              [...messages].pop() &&
+                              [...messages].pop()?.seenState === "unseen" &&
+                              [...messages].pop()?.senderName !==
+                                userData?.username
+                                ? classes.unseen
+                                : null
+                            }
+                          >
+                            {/* {sender.name} */}
+                            {name}
+                          </Typography>
+                        </Fragment>
+                      }
+                      secondary={
+                        <Fragment>
+                          <Typography
+                            variant="span.body2"
+                            className={
+                              [...messages].pop() &&
+                              [...messages].pop()?.seenState === "unseen" &&
+                              [...messages].pop()?.senderName !==
+                                userData?.username
+                                ? classes.unseen
+                                : null
+                            }
+                          >
+                            {[...messages].pop() &&
+                              ([...messages].pop()?.senderName ===
+                              userData?.username
+                                ? "You: "
+                                : "") +
+                                FormatDataUtils.truncate(
+                                  [...messages].pop()?.message,
+                                  20
+                                )}
+                          </Typography>
+                        </Fragment>
+                      }
+                    />
+                  </ListItem>
+                )}
+              </Box>
+            );
+          })}
         </List>
       </Stack>
     </Stack>

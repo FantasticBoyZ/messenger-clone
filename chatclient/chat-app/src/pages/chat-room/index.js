@@ -3,6 +3,7 @@ import {
   GifRounded,
   InfoRounded,
   LocalPhoneRounded,
+  Send,
   ThumbUp,
   VideocamRounded,
 } from "@mui/icons-material";
@@ -17,7 +18,7 @@ import {
   Typography,
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 const useStyle = makeStyles({
   myMessage: {
@@ -53,8 +54,72 @@ const useStyle = makeStyles({
     },
   },
 });
-const ChatRoom = () => {
+const ChatRoom = (props) => {
+  const {
+    privateChats,
+    setPrivateChats,
+    publicChats,
+    tab,
+    userData,
+    setUserData,
+    stompClient,
+  } = props;
   const classes = useStyle();
+  const [isTyping, setIsTyping] = useState(false);
+
+  const handleMessage = (event) => {
+    setUserData({ ...userData, message: event.target.value });
+    setIsTyping(true);
+  };
+
+  const sendMessage = (e) => {
+    if (e.keyCode === 13 || e.type === "click") {
+      switch (tab) {
+        case "CHATROOM":
+          if (stompClient) {
+            let chatMessage = {
+              senderName: userData.username,
+              message: userData.message,
+              status: "MESSAGE",
+            };
+            console.log(chatMessage);
+            stompClient.send("/app/message", {}, JSON.stringify(chatMessage));
+            setUserData({ ...userData, message: "" });
+          }
+          break;
+
+        default:
+          if (stompClient) {
+            let chatMessage = {
+              senderName: userData.username,
+              receiverName: tab,
+              message: userData.message,
+              status: "MESSAGE",
+              seenState: 'unseen'
+            };
+            console.log(chatMessage);
+            if (userData.username !== tab) {
+              privateChats.get(tab).push(chatMessage);
+              setPrivateChats(new Map(privateChats));
+            }
+            stompClient.send(
+              "/app/private-message",
+              {},
+              JSON.stringify(chatMessage)
+            );
+            setUserData({ ...userData, message: "" });
+          }
+          break;
+      }
+      setIsTyping(false)
+    }
+  };
+
+  useEffect(() => {
+    console.log("stompclient", stompClient);
+    console.log(privateChats);
+    console.log(publicChats);
+  }, [privateChats, publicChats]);
   return (
     <Stack className={classes.chatRoomContainer}>
       <Stack
@@ -83,7 +148,7 @@ const ChatRoom = () => {
           </Badge>
           <Stack>
             <Typography variant="span" fontSize="17px">
-              <strong>Gái Xênh</strong>
+              <strong>{tab}</strong>
             </Typography>
             <Typography variant="body2" fontSize="13px">
               Đang hoạt động
@@ -111,7 +176,7 @@ const ChatRoom = () => {
 
       <Divider />
       <Stack px={1} className={classes.messageContainer}>
-        <Stack direction="row" justifyContent="flex-end" py={1}>
+        {/* <Stack direction="row" justifyContent="flex-end" py={1}>
           <Typography variant="p" className={classes.myMessage}>
             Bên đó đang làm gì thế?
           </Typography>
@@ -142,7 +207,57 @@ const ChatRoom = () => {
         </Stack>
         <Typography variant="p" className={classes.otherMessage}>
           Hihi anh này khéo thật đấy
-        </Typography>
+        </Typography> */}
+        {tab === "CHATROOM" && (
+          <>
+            {publicChats.map((chat, index) => (
+              <Stack
+                direction="row"
+                key={index}
+                justifyContent={
+                  chat.senderName === userData.username ? "flex-end" : null
+                }
+                py={1}
+              >
+                <Typography
+                  variant="p"
+                  className={
+                    chat.senderName === userData.username
+                      ? classes.myMessage
+                      : classes.otherMessage
+                  }
+                >
+                  {chat.message}
+                </Typography>
+              </Stack>
+            ))}
+          </>
+        )}
+        {tab !== "CHATROOM" && (
+          <>
+            {[...privateChats.get(tab)].map((chat, index) => (
+              <Stack
+                direction="row"
+                key={index}
+                justifyContent={
+                  chat.senderName === userData.username ? "flex-end" : null
+                }
+                py={1}
+              >
+                <Typography
+                  variant="p"
+                  className={
+                    chat.senderName === userData.username
+                      ? classes.myMessage
+                      : classes.otherMessage
+                  }
+                >
+                  {chat.message}
+                </Typography>
+              </Stack>
+            ))}
+          </>
+        )}
       </Stack>
       <Divider />
       <Stack direction="row" spacing={1} py={1.5}>
@@ -161,6 +276,14 @@ const ChatRoom = () => {
           name="message"
           variant="outlined"
           fullWidth
+          value={userData.message}
+          onChange={handleMessage}
+          onKeyDown={sendMessage}
+          onBlur={() => {
+            if(!userData.message) {
+              setIsTyping(false)
+            }
+          }}
           sx={{
             "& .MuiOutlinedInput-root": {
               borderRadius: "50px",
@@ -184,11 +307,19 @@ const ChatRoom = () => {
             },
           }}
         />
-        <Tooltip title="Gửi lượt thích">
-          <IconButton className={classes.iconActionButton}>
-            <ThumbUp className={classes.iconAction} />
-          </IconButton>
-        </Tooltip>
+        {isTyping ? (
+          <Tooltip title="Gửi">
+            <IconButton onClick={sendMessage} className={classes.iconActionButton}>
+              <Send className={classes.iconAction} />
+            </IconButton>
+          </Tooltip>
+        ) : (
+          <Tooltip title="Gửi lượt thích">
+            <IconButton className={classes.iconActionButton}>
+              <ThumbUp className={classes.iconAction} />
+            </IconButton>
+          </Tooltip>
+        )}
       </Stack>
     </Stack>
   );
