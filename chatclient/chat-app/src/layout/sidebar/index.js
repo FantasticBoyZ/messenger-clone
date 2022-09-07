@@ -252,13 +252,16 @@ const Sidebar = (props) => {
                       setTab(name);
                       if ([...messages]) {
                         let messagesClone = [...messages];
-                        const messageReceive = messagesClone.pop();
-                        messagesClone.push({
-                          ...messageReceive,
-                          seenState: "seen",
-                        });
-                        console.log(messagesClone);
-                        privateChats.set(name, messagesClone);
+                        console.log(messagesClone[0]);
+                        if (messagesClone.length > 1) {
+                          const messageReceive = messagesClone.pop();
+                          messagesClone.push({
+                            ...messageReceive,
+                            seenState: "seen",
+                          });
+                          console.log(messagesClone);
+                          privateChats.set(name, messagesClone);
+                        }
                       }
                     }}
                     selected={tab === name}
